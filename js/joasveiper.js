@@ -1,3 +1,9 @@
+/* TODO:
+    - Remove globals
+    - Remove GUI-Code from Board-class
+    - Reset timer on newGame
+*/
+
 // Globals. Nice!
 var boardSizeCustom;
 var board;
@@ -7,9 +13,7 @@ var boardSize;
 var tileSize;
 var fill = false;
 var timer;
-var gameStarted = false;
-var startTime;
-
+var boardSizeSet;
 var debug = false;
 
 var defaultSettings = {
@@ -29,8 +33,6 @@ var tileType = {
 };
 
 var btnColors = {
-    //'flag': '#F0F',
-    //'flag': '#D69200',
     'flag': '#FF506E',
     'none': '#C0C4AC',
     'exploded': 'red',
@@ -46,8 +48,10 @@ var btnColors = {
 };
 
 $(function() {
+    var ui = new JoaSveiperUI();
+    
     determineLevel();
-    createUI();
+    ui.showSettingsDialog();
     //initGame();
 });
 
@@ -95,8 +99,8 @@ function Board(size, mines) {
     };
     
     this.insertMines = function(avoid) {
-        var currentMines = 0;
-        while(currentMines < self.mines) {
+        var mineCount = 0;
+        while(mineCount < self.mines) {
             var px = Math.floor(Math.random() * self.boardSize.x);
             var py = Math.floor(Math.random() * self.boardSize.y);
             
@@ -117,7 +121,7 @@ function Board(size, mines) {
             }
             
             self.board[px][py].type = tileType.bomb;
-            currentMines++;
+            mineCount++;
         }
     };
     
@@ -151,6 +155,7 @@ function Board(size, mines) {
             }
         }
     };
+    
     this.flagsSurrounding = function(x, y) {
         var count = 0;
         
@@ -241,21 +246,19 @@ function Board(size, mines) {
         }
         return tile.state == tileState.none;
     };
-    
+
     this.selectTile = function(x, y) {
-        if(self.selected)
-            $(self.getButton(self.selected.x, self.selected.y)).css('border', defaultBorders.none);
+        if(self.selected) $(self.getButton(self.selected.x, self.selected.y)).css('border', defaultBorders.none);
         self.selected = { x: x, y: y};  
         $(self.getButton(x, y)).css('border', defaultBorders.hover);
     };
     
     this.firstClick = function(x, y) {
-        
         x = parseInt(x);
         y = parseInt(y);
         var btn = self.getButton(x,y);
         
-        var avoid = new Array(
+        var tilesToAvoid = new Array(
             {x: x, y: y},
             {x: x+1, y: y},
             {x: x, y: y+1},
@@ -266,7 +269,7 @@ function Board(size, mines) {
             {x: x-1, y: y+1},
             {x: x+1, y: y-1}
         );
-        self.insertMines(avoid);
+        self.insertMines(tilesToAvoid);
         self.updatemineCount();
         
         self.click = self.defaultClick;
@@ -370,7 +373,6 @@ function Board(size, mines) {
             $(tile.btn).css('background-color', btnColors.flag);
             self.flags++;
         }
-        self.setTitle();
     };
     
     this.setTitle = function() {
@@ -394,54 +396,7 @@ function Tile() {
     this.type = tileType.free;
     this.state = tileState.none;
     this.minesClose = 0;
-}
-function buildTable(board) {
-    var table = $("#sveip_content");
-    for(var i = 0; i < board.boardSize.x; i++) {
-        var tr = $("<tr>");
-        
-        for(var j = 0; j < board.boardSize.y; j++) {
-            var td = $("<td>").appendTo(tr);
-            var btn = $("<button>").attr({'x':i , 'y': j})
-                .addClass("minebtn").appendTo(td)
-                .mouseup(mineOnClick);
-            board.board[i][j].btn = btn;
-        }
-        $(tr).appendTo(table);
-    }
-    $(".minebtn").bind('contextmenu', function(e){ return false; })
-        .css('width', getTileSize())
-        .css('height', getTileSize())
-        .css('font-size', getTileSize()-4)
-        .css('background-color', btnColors.none);
-}
-
-function mineOnClick(event) {
-    jlog($(event.target).attr('x') + " " + $(event.target).attr('y'));
-                    
-    if(!gameStarted) {
-        gameStarted = true;
-        startTime = (new Date()).getTime();
-    }
-    
-    switch(event.which) {
-        case 1: // Left click
-            board.click($(event.target).attr('x'), $(event.target).attr('y'));
-            // Check win
-            if(board.clicked == (board.boardSize.x*board.boardSize.y)-board.mines) {
-                board.onGameWon();
-            }
-            break;
-        case 3: // RightClick
-            board.flag($(event.target).attr('x'), $(event.target).attr('y'));
-            break;
-    }
-    return true;
-}
-
-setInterval(function() {
-   if(gameStarted) timer++; 
-}, 1000);
+} // class Tile
 
 function getLevelFromText(txt) {
     switch(txt) {
@@ -457,7 +412,7 @@ function getLevelFromText(txt) {
             return 0;
     }
 }
-var boardSizeSet;
+
 function determineLevel() {
     jlog("Fetching level parameters");
     //console.log(document.location.search);
@@ -493,153 +448,235 @@ function determineLevel() {
     jlog("board size: " + boardSize.x + " " + boardSize.y);
     jlog("done fetching level parameters");
 }
+
 function getBoardSize() {
     var y = Math.floor($(window).width() / getTileSize());
     var x = Math.floor($(window).height() / getTileSize());
     return { 'x': x, 'y': y };
 }
 
-function initGame() {
-    // Reset timer
-    timer = 0;
-    
-    $("#sveip_content").empty();
-    var mines = Math.floor((boardSize.x * boardSize.y) / (3*(4-level)));
-    
-    board = new Board(boardSize, mines);
-    
-    board.onGameOver = function() {
-        gameStarted = false;
-        newGameDialog("Game Over", "Game over");
-    };
-    
-    board.onGameWon = function() {
-        gameStarted = false;
-        var endTime = new Date().getTime();
-        console.log(startTime + " - " + endTime);
-        console.log(endTime-startTime);
-        newGameDialog("YAAAAY", "You did it in " + getTime(endTime - startTime));
-    };
-    
-    buildTable(board);
-}
-
-function getTime(millis) {
-    var ms = millis%1000;
-    millis = (millis-ms)/1000;
-    var s = millis % 60;
-    millis = (millis-s)/60;
-    var m = millis % 60;
-    millis = (millis-m)/60;
-    var h = millis % 60;
-    
-    var str = "";
-    
-    if(h > 0)
-        str += h + "h ";
-    
-    str += m + "m ";
-    str += s + "s ";
-    str += ms + "ms.";
-    return str;
-}
-
-
-function newGameDialog(title, message) {
-    var msg = $("<p>").text(message);
-    var div = $( "<div>" ).attr('title', title).html(msg).attr('id','dialog');
-     $(div).dialog(
-         {modal: true, buttons: 
-            { 'New Game': function() {
-                $(div).dialog('close');
-                initGame();
-            }, 'Settings': function() {
-                $(div).dialog('close');
-                createUI();
-            }
-        }
-    });
-}
 function jlog(message) {
     if(debug) {
         console.log(message);
     }
 }
+
 function getTileSize() {
     return tileSize;
 }
-function createUI() {
-    $("select[name='level']").val(levelText);
-    $("#tileSizeValue").html(getTileSize());
+
+function JoaSveiperUI() {
+    var self = this;
     
-    $("#slider").slider({min: 10, max: 50, value: getTileSize(),
-        slide: function(event, ui) {
-            $("#tileSizeValue").html(ui.value);
-            tileSize = ui.value;
-            boardSize = getBoardSize();
-            if(fill) {
+    self.gameStarted = false;
+    self.startTime = 0;
+    
+    self.buildTable = function() {
+        var table = $("#sveip_content");
+        for(var i = 0; i < self.board.boardSize.x; i++) {
+            var tr = $("<tr>");
+            
+            for(var j = 0; j < self.board.boardSize.y; j++) {
+                var td = $("<td>").appendTo(tr);
+                var btn = $("<button>").attr({'x':i , 'y': j})
+                    .addClass("minebtn").appendTo(td)
+                    .mouseup(self.mineOnClick);
+                self.board.board[i][j].btn = btn;
+            }
+            $(tr).appendTo(table);
+        }
+        $(".minebtn").bind('contextmenu', function(e){ return false; })
+            .css('width', getTileSize())
+            .css('height', getTileSize())
+            .css('font-size', getTileSize()-4)
+            .css('background-color', btnColors.none);
+    };
+    
+    self.newGame = function() {
+        // Reset timer
+        timer = 0;
+        
+        $("#sveip_content").empty();
+        var mines = Math.floor((boardSize.x * boardSize.y) / (3*(4-level)));
+        
+        self.board = new Board(boardSize, mines);
+        
+        self.board.onGameOver = function() {
+            self.gameStarted = false;
+            self.showNewGameDialog("Game Over", "Game over");
+        };
+        
+        self.board.onGameWon = function() {
+            self.gameStarted = false;
+            var endTime = new Date().getTime();
+            console.log(self.startTime + " - " + endTime);
+            console.log(endTime- self.startTime);
+            self.showNewGameDialog("YAAAAY", "You did it in " + self.formatTime(endTime - self.startTime));
+        };
+        
+        self.buildTable();
+    };
+    
+    self.showSettingsDialog = function() {
+        $("select[name='level']").val(levelText);
+        $("#tileSizeValue").html(getTileSize());
+        
+        $("#slider").slider({min: 10, max: 50, value: getTileSize(),
+            slide: function(event, ui) {
+                $("#tileSizeValue").html(ui.value);
+                tileSize = ui.value;
+                boardSize = getBoardSize();
+                if(fill) {
+                    var bs = getBoardSize();
+                    $("#boardSizeContent").html("X: " + bs.x + "<br/>Y: " + bs.y);
+                }
+            }
+        });
+        
+        $("#boardType").buttonset();
+        
+        if(!boardSizeCustom)
+            boardSizeCustom = $("#boardSizeCustom");
+        
+        $("input[name=boardSize]").on('change', function() {
+            if($(this).val() == 'Fill') {
                 var bs = getBoardSize();
                 $("#boardSizeContent").html("X: " + bs.x + "<br/>Y: " + bs.y);
+                fill = true;
+            } 
+            else if($(this).val() == 'Custom') {
+                $("#boardSizeContent").html(boardSizeCustom);
+                self.setupSpinners();
+                fill = false;
             }
-        }
-    });
-    
-    $("#boardType").buttonset();
-    
-    if(!boardSizeCustom)
-        boardSizeCustom = $("#boardSizeCustom");
-    
-    $("input[name=boardSize]").on('change', function() {
-        if($(this).val() == 'Fill') {
+        });
+        
+        $("#boardSizeContent").html(boardSizeCustom);
+        
+        $("#settings").dialog({modal: true, buttons: { Ok: function() {
+            // On OK
+            level = getLevelFromText($("select[name='level']").val());
+            if(fill) {
+                self.boardSize = getBoardSize();
+            } else {
+                var xVal = $("#inputBoardSizeY").spinner('value');
+                var yVal = $("#inputBoardSizeX").spinner('value');
+                self.boardSize = {x: xVal, y: yVal};
+            }
+            self.newGame();
+            
+            // Set URL
+            
+            var url = document.URL.split("?")[0] + 
+                    "?level=" + $("select[name='level']").val() + 
+                    "&x=" + self.boardSize.y + 
+                    "&y=" + self.boardSize.x + 
+                    "&tileSize=" + tileSize;
+            
+            window.history.pushState("sumthn", "", url);
+            
+            self.setTitle();
+            $(this).dialog("close");
+        }}});
+        
+        if(boardSizeSet) {
+            self.setupSpinners();
+            fill = false;
+        }else {
             var bs = getBoardSize();
             $("#boardSizeContent").html("X: " + bs.x + "<br/>Y: " + bs.y);
             fill = true;
-        } 
-        else if($(this).val() == 'Custom') {
-            $("#boardSizeContent").html(boardSizeCustom);
-            setupSpinners();
-            fill = false;
         }
-    });
+    };
     
-    $("#boardSizeContent").html(boardSizeCustom);
+    self.showNewGameDialog = function(title, message) {
+        var msg = $("<p>").text(message);
+        var div = $( "<div>" ).attr('title', title).html(msg).attr('id','dialog');
+         $(div).dialog(
+             {modal: true, buttons: 
+                { 'New Game': function() {
+                    $(div).dialog('close');
+                    self.newGame();
+                }, 'Settings': function() {
+                    $(div).dialog('close');
+                    self.showSettingsDialog();
+                }
+            }
+        });
+    };
     
-    $("#settings").dialog({modal: true, buttons: { Ok: function() {
-        // On OK
-        level = getLevelFromText($("select[name='level']").val());
-        if(fill) {
-            boardSize = getBoardSize();
-        } else {
-            var xVal = $("#inputBoardSizeY").spinner('value');
-            var yVal = $("#inputBoardSizeX").spinner('value');
-            boardSize = {x: xVal, y: yVal};
+    self.setupSpinners = function() {
+        $("#inputBoardSizeX").spinner().spinner('value', boardSize.y );
+        $("#inputBoardSizeY").spinner().spinner('value', boardSize.x );
+    };
+    
+    self.formatTime = function(milliseconds) {
+        var ms = milliseconds%1000;
+        milliseconds = (milliseconds-ms)/1000;
+        var seconds = milliseconds % 60;
+        milliseconds = (milliseconds-seconds)/60;
+        var minutes = milliseconds % 60;
+        milliseconds = (milliseconds-minutes)/60;
+        var hours = milliseconds % 60;
+        
+        var timeString = "";
+        
+        if(hours > 0)
+            timeString += hours + "h ";
+        
+        timeString += minutes + "m ";
+        timeString += seconds + "s ";
+        timeString += ms + "ms.";
+        return timeString;
+    };
+    
+    self.setTitle = function() {
+        document.title = "JS: " + self.board.flags + "/" + self.board.mines;
+    };
+    
+    self.mineOnClick = function(event) {
+        jlog($(event.target).attr('x') + " " + $(event.target).attr('y'));
+                        
+        if(!self.gameStarted) {
+            self.gameStarted = true;
+            self.startTime = (new Date()).getTime();
         }
-        initGame();
         
-        // Set URL
-        
-        var url = document.URL.split("?")[0] + 
-                "?level=" + $("select[name='level']").val() + 
-                "&x=" + boardSize.y + 
-                "&y=" + boardSize.x + 
-                "&tileSize=" + tileSize;
-        
-        window.history.pushState("sumthn", "", url);
-        
-        board.setTitle();
-        $(this).dialog("close");
-    }}});
-    
-    if(boardSizeSet) {
-        setupSpinners();
-        fill = false;
-    }else {
-        var bs = getBoardSize();
-        $("#boardSizeContent").html("X: " + bs.x + "<br/>Y: " + bs.y);
-        fill = true;
-    }
+        switch(event.which) {
+            case 1: // Left click
+                self.board.click($(event.target).attr('x'), $(event.target).attr('y'));
+                // Check win
+                if(self.board.clicked == (self.boardSize.x*self.boardSize.y) - self.board.mines) {
+                    self.board.onGameWon();
+                }
+                break;
+            case 3: // RightClick
+                self.board.flag($(event.target).attr('x'), $(event.target).attr('y'));
+                self.setTitle();
+                break;
+        }
+        return true;
+    };
 }
-function setupSpinners() {
-    $("#inputBoardSizeX").spinner().spinner('value', boardSize.y );
-    $("#inputBoardSizeY").spinner().spinner('value', boardSize.x );
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

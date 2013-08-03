@@ -1,0 +1,26 @@
+body {
+    margin: 0 auto;
+    background-image: url("images/bkg.png");
+}
+
+table {
+    margin: 0 auto;
+}
+
+.minebtn {
+    display: block;
+    background-color: white;    
+    border: solid 1px gray;
+    padding: 0;
+    margin: 0;
+    font-weight: bold;
+}
+
+.minebtnHover {
+    background-color: black;
+    border: solid 1px red;
+}
+
+.ui-dialog-titlebar-close {
+    visibility: hidden;
+}
