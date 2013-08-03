@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8">
+        <title>Joasveiper</title>
+        <meta name="description" content="Free Mine Sweeper">
+        <meta name="keywords" content="Mine,Sweep,Sweeper,MineSweeper,Game,Free">
+        <meta name="author" content="Joachim Carlsen">
+
+        <link rel="stylesheet" href="css/jquery-ui-1.10.3.custom.css" />
+        <style type="text/css">
+        body {
+            margin: 0 auto;
+            background-image: url("css/images/bkg.png");
+        }
+        
+        table {
+            margin: 0 auto;
+        }
+        
+        .minebtn {
+            display: block;
+            background-color: white;    
+            border: solid 1px gray;
+            padding: 0;
+            margin: 0;
+            font-weight: bold;
+        }
+        
+        .minebtnHover {
+            background-color: black;
+            border: solid 1px red;
+        }
+        
+        .ui-dialog-titlebar-close {
+            visibility: hidden;
+        }
+        </style>
+        <script src="js/jquery.js"></script>
+        <script src="js/jquery-ui-1.10.3.js"></script>
+        <script src="js/knockout.js"></script>
+        <script src="js/joasveiper.js"></script>
+    </head>
+    <body>
+        <div id="mainContent">
+        <table id="sveip_content" border="0" cellpadding="0" cellspacing="0">
+        </table>
+        </div>
+        
+        <div id="settings" title="Settings">
+            <p>Level</p>
+            <select name="level">
+                <option>easy</option>
+                <option>medium</option>
+                <option>hard</option>
+                <option>extreme</option>
+            </select>
+            <p>TileSize <span id="tileSizeValue"></span></p>
+            <div id="slider"></div>
+            <p>BoardSize</p>
+            <div id="boardType">
+                <input type="radio" id="radioFill" name="boardSize" value="Fill"/><label for="radioFill">Fill</label>
+                <input type="radio" id="radioCustom" name="boardSize" value="Custom"/><label for="radioCustom">Custom</label>
+            </div>
+            <div id="boardSizeContent"></div>
+        </div>
+        <div id="boardSizeCustom">
+            <label for="inputBoardSizeX">X</label>
+            <input id="inputBoardSizeX" name="valueX" /><br/>
+            <label for="inputBoardSizeY">Y</label>
+            <input id="inputBoardSizeY" name="valueY" />
+        </div>
+        
+        <script type="text/javascript">
+
+          var _gaq = _gaq || [];
+          _gaq.push(['_setAccount', 'UA-42137227-1']);
+          _gaq.push(['_trackPageview']);
+        
+          (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+          })();
+        
+        </script>
+    </body>
+</html>
