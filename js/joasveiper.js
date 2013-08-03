@@ -332,6 +332,7 @@ function Board(size, mines) {
     this.tryGet = function(x, y) {
         x = parseInt(x);
         y = parseInt(y);
+        
         if(x < 0 || x >= self.boardSize.x || y < 0 || y >= self.boardSize.y) {
             return null;
         }
@@ -371,12 +372,15 @@ function Board(size, mines) {
         }
         self.setTitle();
     };
+    
     this.setTitle = function() {
         document.title = "JS: " + self.flags + "/" + self.mines;
     };
+    
     this.getButton = function(x, y) {
         return self.board[x][y].tile;  
     };
+    
     this.gameOver = function() {
         alert("GAME OVER!");
     };
